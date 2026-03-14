@@ -334,16 +334,9 @@ async function doSearch(){
   btn.disabled = false; btn.textContent = 'Hledat';
 }
 
-async function callClaude(q, key){
-  const shopList = SHOPS.map((s,i) => `${i+1}. ${s.name} (${s.url})`).join('\n');
-
-  const prompt = `Jsi asistent pro cenové srovnání nářadí. Uživatel hledá produkt: "${q}".
-
-Prohledej tyto české e-shopy a najdi cenu tohoto produktu:
-${shopList}
-
-Odpověz POUZE jako čistý JSON bez jakéhokoli textu navíc, bez markdown, bez backtick:
-{"results":[{"shop":"Boukal.cz","found":true,"price":2490,"product_name":"přesný název produktu jak je v obchodě","url":"https://primy-odkaz-na-produkt.cz/..."},{"shop":"Topcentrum.cz","found":false,"price":null,"product_name":null,"url":null}],"summary":"Stručný popis co bylo nalezeno"}`;
+async function searchOneShop(q, shop, key) {
+  const domain = shop.url.replace('https://www.','').replace('https://','');
+  const prompt = `Search for product "${q}" on ${domain}. Find the CZK price and direct product URL. Reply ONLY as JSON without any other text: {"found":true,"price":2490,"product_name":"exact name","url":"https://..."} or if not found: {"found":false,"price":null,"product_name":null,"url":null}`;
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -355,7 +348,7 @@ Odpověz POUZE jako čistý JSON bez jakéhokoli textu navíc, bez markdown, bez
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      max_tokens: 400,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }]
     })
@@ -368,19 +361,45 @@ Odpověz POUZE jako čistý JSON bez jakéhokoli textu navíc, bez markdown, bez
 
   const data = await resp.json();
   const txt = data.content?.filter(b => b.type === 'text').map(b => b.text).join('');
-  if(!txt) throw new Error('Prázdná odpověď od AI.');
+  if(!txt) return { found: false, price: null, product_name: null, url: null };
 
-  let parsed;
   try {
     const clean = txt.replace(/```json|```/g,'').trim();
-    const m = clean.match(/\{[\s\S]*\}/);
-    parsed = JSON.parse(m ? m[0] : clean);
+    const m = clean.match(/\{[\s\S]*?\}/);
+    return m ? JSON.parse(m[0]) : { found: false, price: null, product_name: null, url: null };
   } catch {
-    throw new Error('Nepodařilo se zpracovat odpověď AI.');
+    return { found: false, price: null, product_name: null, url: null };
+  }
+}
+
+async function callClaude(q, key){
+  const results = [];
+
+  for(let i = 0; i < SHOPS.length; i++) {
+    const shop = SHOPS[i];
+    setStep(i, 'active');
+    document.getElementById('loadTxt').textContent = `Hledám v ${shop.name}… (${i+1}/${SHOPS.length})`;
+
+    try {
+      const result = await searchOneShop(q, shop, key);
+      results.push({ shop: shop.name, ...result });
+      setStep(i, result.found ? 'done' : 'err');
+    } catch(e) {
+      results.push({ shop: shop.name, found: false, price: null, product_name: null, url: null });
+      setStep(i, 'err');
+    }
+
+    // Pauza mezi požadavky aby nedošlo k rate limitu
+    if(i < SHOPS.length - 1) await new Promise(r => setTimeout(r, 3000));
   }
 
-  parsed.results?.forEach((r, i) => setStep(i, r.found ? 'done' : 'err'));
-  return parsed;
+  const found = results.filter(r => r.found && r.price);
+  return {
+    results,
+    summary: found.length > 0
+      ? `Nalezeno v ${found.length} z ${results.length} obchodů.`
+      : 'Produkt nebyl nalezen v žádném obchodě.'
+  };
 }
 
 function renderResults(q, data){

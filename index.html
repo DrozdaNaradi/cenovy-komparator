@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cenový Komparátor – Drozda Nářadí</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f2f2f7;
+  --surface: #ffffff;
+  --surface2: #f2f2f7;
+  --border: rgba(0,0,0,0.08);
+  --text: #1c1c1e;
+  --text2: #6e6e73;
+  --text3: #aeaeb2;
+  --accent: #007aff;
+  --green: #34c759;
+  --orange: #ff9500;
+  --red: #ff3b30;
+  --radius: 12px;
+  --radius-lg: 18px;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+.navbar {
+  background: rgba(242,242,247,0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  padding: 0 20px; height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+.nav-sub { font-size: 11px; color: var(--text2); }
+.nav-badge {
+  background: var(--accent); color: white;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px;
+}
+.main { max-width: 700px; margin: 0 auto; padding: 20px 16px 80px; }
+.info {
+  background: rgba(0,122,255,0.08);
+  border-radius: var(--radius);
+  padding: 12px 16px; font-size: 13px;
+  color: var(--accent); line-height: 1.5;
+  margin-bottom: 16px; display: flex; gap: 8px;
+}
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 20px; margin-bottom: 16px;
+}
+.card-label { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 8px; display: block; }
+.row { display: flex; gap: 8px; align-items: center; }
+.inp {
+  flex: 1;
+  background: var(--surface2);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit; font-size: 17px; font-weight: 500;
+  padding: 11px 14px; outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.inp:focus { border-color: var(--accent); background: white; }
+.inp::placeholder { color: var(--text3); font-weight: 400; font-size: 15px; }
+.btn {
+  background: var(--accent); color: white; border: none;
+  border-radius: var(--radius);
+  font-family: inherit; font-size: 15px; font-weight: 600;
+  padding: 11px 20px; cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.btn:hover { opacity: 0.85; }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+.key-row { display: flex; gap: 8px; align-items: center; }
+.key-label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+.key-inp {
+  flex: 1; background: var(--surface2);
+  border: 1.5px solid transparent; border-radius: 10px;
+  color: var(--text); font-family: monospace; font-size: 13px;
+  padding: 8px 12px; outline: none; transition: border-color 0.2s;
+}
+.key-inp:focus { border-color: var(--accent); background: white; }
+.key-inp::placeholder { font-family: inherit; color: var(--text3); }
+.btn-save {
+  background: var(--surface2); border: none;
+  border-radius: 8px; font-family: inherit;
+  font-size: 13px; font-weight: 500; color: var(--accent);
+  padding: 8px 14px; cursor: pointer; transition: background 0.15s;
+  white-space: nowrap;
+}
+.btn-save:hover { background: rgba(0,122,255,0.1); }
+.hist { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.hist-label { font-size: 12px; color: var(--text3); }
+.pill {
+  background: var(--surface2); border: none;
+  border-radius: 20px; font-family: inherit;
+  font-size: 13px; color: var(--accent);
+  padding: 3px 11px; cursor: pointer; transition: background 0.15s;
+}
+.pill:hover { background: rgba(0,122,255,0.1); }
+.load-card { display: flex; flex-direction: column; gap: 12px; }
+.load-row { display: flex; align-items: center; gap: 12px; }
+.spinner {
+  width: 22px; height: 22px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.load-txt { font-size: 14px; color: var(--text2); }
+.steps { display: flex; flex-direction: column; gap: 6px; padding-left: 4px; }
+.step { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text3); transition: color 0.3s; }
+.step.active { color: var(--accent); }
+.step.done { color: var(--green); }
+.step.err { color: var(--text3); }
+.step-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.step.active .step-dot { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1)}50%{transform:scale(1.7);opacity:0.6} }
+.summary {
+  background: rgba(52,199,89,0.08);
+  border-radius: var(--radius); padding: 14px 16px;
+  display: flex; gap: 12px; align-items: center; margin-bottom: 12px;
+}
+.sum-ico { font-size: 26px; }
+.sum-h { font-size: 15px; font-weight: 600; color: var(--text); }
+.sum-p { font-size: 13px; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+.sec-hdr { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.sec-title { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; }
+.sec-meta { font-size: 13px; color: var(--text2); }
+.result {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  padding: 14px 16px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+  animation: su 0.3s ease forwards; opacity: 0; transform: translateY(8px);
+  transition: box-shadow 0.2s;
+}
+.result:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+@keyframes su { to { opacity:1; transform:translateY(0); } }
+.shop-ico {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.shop-info { flex: 1; min-width: 0; }
+.shop-name { font-size: 15px; font-weight: 600; }
+.shop-prod { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.price-col { text-align: right; flex-shrink: 0; }
+.price { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; }
+.price.best { color: var(--green); }
+.price.na { font-size: 14px; font-weight: 400; color: var(--text3); }
+.tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; display: inline-block; margin-top: 2px; }
+.tag-best { background: rgba(52,199,89,0.12); color: var(--green); }
+.tag-diff { background: rgba(255,149,0,0.12); color: var(--orange); }
+.tag-na { background: var(--surface2); color: var(--text3); }
+.open-link {
+  font-size: 13px; color: var(--accent); text-decoration: none;
+  padding: 5px 11px; background: rgba(0,122,255,0.08);
+  border-radius: 8px; white-space: nowrap; flex-shrink: 0;
+}
+.open-link:hover { background: rgba(0,122,255,0.16); }
+.err-box {
+  background: rgba(255,59,48,0.08);
+  border: 1px solid rgba(255,59,48,0.2);
+  border-radius: var(--radius); padding: 14px 16px;
+  font-size: 14px; color: var(--red); margin-bottom: 12px;
+}
+.empty { text-align: center; padding: 50px 20px; color: var(--text3); }
+.empty-ico { font-size: 48px; margin-bottom: 14px; opacity: 0.45; }
+.empty h3 { font-size: 17px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+.empty p { font-size: 14px; line-height: 1.5; }
+.result:nth-child(1){animation-delay:0.05s}
+.result:nth-child(2){animation-delay:0.10s}
+.result:nth-child(3){animation-delay:0.15s}
+.result:nth-child(4){animation-delay:0.20s}
+.result:nth-child(5){animation-delay:0.25s}
+.result:nth-child(6){animation-delay:0.30s}
+@media(max-width:500px){
+  .row{flex-direction:column}
+  .btn{width:100%}
+  .open-link{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div>
+    <div class="nav-title">Cenový Komparátor</div>
+    <div class="nav-sub">drozda-naradi.cz</div>
+  </div>
+  <div class="nav-badge">AI</div>
+</div>
+
+<div class="main">
+
+  <div class="info">
+    <span>ℹ️</span>
+    <span>AI prohledá 6 obchodů a zjistí aktuální ceny. Hledání trvá přibližně 30–60 sekund.</span>
+  </div>
+
+  <div class="card">
+    <span class="card-label">Vyhledat produkt</span>
+    <div class="row">
+      <input class="inp" id="qInp" placeholder="EAN kód nebo název produktu..." autocomplete="off" spellcheck="false">
+      <button class="btn" id="searchBtn" onclick="doSearch()">Hledat</button>
+    </div>
+    <div class="divider"></div>
+    <div class="key-row">
+      <span class="key-label">🔑 API klíč</span>
+      <input class="key-inp" type="password" id="keyInp" placeholder="sk-ant-api03-...">
+      <button class="btn-save" onclick="saveKey()">Uložit</button>
+    </div>
+    <div class="hist" id="histWrap" style="display:none">
+      <span class="hist-label">Poslední:</span>
+      <div id="histPills"></div>
+    </div>
+  </div>
+
+  <div class="card" id="loadCard" style="display:none">
+    <div class="load-card">
+      <div class="load-row">
+        <div class="spinner"></div>
+        <div class="load-txt" id="loadTxt">AI prohledává obchody…</div>
+      </div>
+      <div class="steps" id="stepsWrap"></div>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="empty">
+      <div class="empty-ico">🛠️</div>
+      <h3>Zadej EAN nebo název produktu</h3>
+      <p>AI zjistí ceny ze 6 obchodů<br>a zobrazí je přehledně pod sebou.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SHOPS = [
+  { name:'Boukal.cz',           url:'https://www.boukal.cz',            ico:'🔧' },
+  { name:'Topcentrum.cz',       url:'https://www.topcentrum.cz',        ico:'⚙️' },
+  { name:'Elkov.cz',            url:'https://www.elkov.cz',             ico:'⚡' },
+  { name:'DDPneu.cz',           url:'https://www.ddpneu.cz',            ico:'🏎️' },
+  { name:'Fepro.cz',            url:'https://www.fepro.cz',             ico:'🔩' },
+  { name:'Profesional-club.cz', url:'https://www.profesional-club.cz',  ico:'⭐' },
+];
+
+function gKey(){ try{return localStorage.getItem('cc_k')||'';}catch{return '';} }
+
+function saveKey(){
+  const v = document.getElementById('keyInp').value.trim();
+  if(!v) return;
+  try{ localStorage.setItem('cc_k', v); }catch{}
+  const b = document.querySelector('.btn-save');
+  b.textContent = '✓ Uloženo'; b.style.color = '#34c759';
+  setTimeout(()=>{ b.textContent='Uložit'; b.style.color=''; }, 2000);
+}
+
+function gHist(){ try{return JSON.parse(localStorage.getItem('cc_h2')||'[]');}catch{return [];} }
+function pushHist(q){
+  try{
+    let h = gHist().filter(x => x !== q);
+    h.unshift(q);
+    localStorage.setItem('cc_h2', JSON.stringify(h.slice(0,8)));
+  }catch{}
+  renderHist();
+}
+function renderHist(){
+  const h = gHist();
+  const w = document.getElementById('histWrap');
+  const p = document.getElementById('histPills');
+  if(!h.length){ w.style.display='none'; return; }
+  w.style.display = 'flex';
+  p.innerHTML = h.map(q => `<button class="pill" onclick="fill('${q.replace(/'/g,"\\'")}')">${q}</button>`).join('');
+}
+function fill(q){ document.getElementById('qInp').value = q; doSearch(); }
+
+function initSteps(){
+  document.getElementById('stepsWrap').innerHTML = SHOPS.map((s,i) =>
+    `<div class="step active" id="st${i}"><div class="step-dot"></div><span>${s.name}</span></div>`
+  ).join('');
+}
+function setStep(i, state){
+  const e = document.getElementById('st'+i);
+  if(e) e.className = 'step ' + state;
+}
+
+async function doSearch(){
+  const q = document.getElementById('qInp').value.trim();
+  if(!q){ document.getElementById('qInp').focus(); return; }
+
+  const key = gKey() || document.getElementById('keyInp').value.trim();
+  if(!key){
+    document.getElementById('results').innerHTML = '<div class="err-box">Prosím vlož a ulož Anthropic API klíč.</div>';
+    document.getElementById('keyInp').focus();
+    return;
+  }
+  try{ localStorage.setItem('cc_k', key); }catch{}
+
+  pushHist(q);
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true; btn.textContent = 'Hledám…';
+  document.getElementById('loadCard').style.display = 'block';
+  document.getElementById('loadTxt').textContent = `Hledám: "${q}"`;
+  document.getElementById('results').innerHTML = '';
+  initSteps();
+
+  try {
+    const data = await callClaude(q, key);
+    renderResults(q, data);
+  } catch(e) {
+    document.getElementById('results').innerHTML = `<div class="err-box">Chyba: ${e.message}</div>`;
+  }
+
+  document.getElementById('loadCard').style.display = 'none';
+  btn.disabled = false; btn.textContent = 'Hledat';
+}
+
+async function callClaude(q, key){
+  const shopList = SHOPS.map((s,i) => `${i+1}. ${s.name} (${s.url})`).join('\n');
+
+  const prompt = `Jsi asistent pro cenové srovnání nářadí. Uživatel hledá produkt: "${q}".
+
+Prohledej tyto české e-shopy a najdi cenu tohoto produktu:
+${shopList}
+
+Odpověz POUZE jako čistý JSON bez jakéhokoli textu navíc, bez markdown, bez backtick:
+{"results":[{"shop":"Boukal.cz","found":true,"price":2490,"product_name":"přesný název produktu jak je v obchodě","url":"https://primy-odkaz-na-produkt.cz/..."},{"shop":"Topcentrum.cz","found":false,"price":null,"product_name":null,"url":null}],"summary":"Stručný popis co bylo nalezeno"}`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if(!resp.ok){
+    const err = await resp.json().catch(()=>({}));
+    throw new Error(err?.error?.message || `API chyba ${resp.status}`);
+  }
+
+  const data = await resp.json();
+  const txt = data.content?.filter(b => b.type === 'text').map(b => b.text).join('');
+  if(!txt) throw new Error('Prázdná odpověď od AI.');
+
+  let parsed;
+  try {
+    const clean = txt.replace(/```json|```/g,'').trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    parsed = JSON.parse(m ? m[0] : clean);
+  } catch {
+    throw new Error('Nepodařilo se zpracovat odpověď AI.');
+  }
+
+  parsed.results?.forEach((r, i) => setStep(i, r.found ? 'done' : 'err'));
+  return parsed;
+}
+
+function renderResults(q, data){
+  const results = data.results || [];
+  const area = document.getElementById('results');
+  const found = results.filter(r => r.found && r.price);
+  const best = found.length ? Math.min(...found.map(r => r.price)) : null;
+  const worst = found.length ? Math.max(...found.map(r => r.price)) : null;
+  const diff = best && worst ? worst - best : 0;
+
+  const sorted = [...results].sort((a,b) => {
+    if(a.found && !b.found) return -1;
+    if(!a.found && b.found) return 1;
+    return (a.price||Infinity) - (b.price||Infinity);
+  });
+
+  let html = '';
+
+  if(found.length){
+    html += `<div class="summary">
+      <div class="sum-ico">💰</div>
+      <div>
+        <div class="sum-h">Nejlepší cena: ${best.toLocaleString('cs-CZ')} Kč</div>
+        <div class="sum-p">${data.summary || `Nalezeno v ${found.length} z ${results.length} obchodů.`}${diff > 0 ? ` Rozdíl v cenách: ${diff.toLocaleString('cs-CZ')} Kč.` : ''}</div>
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="sec-hdr">
+    <div class="sec-title">Výsledky</div>
+    <div class="sec-meta">${found.length}/${results.length} obchodů</div>
+  </div>`;
+
+  sorted.forEach((r, i) => {
+    const shop = SHOPS.find(s => s.name === r.shop) || { ico:'🏪' };
+    const isBest = r.found && r.price === best;
+
+    let priceH, tagH;
+    if(r.found && r.price){
+      priceH = `<div class="price${isBest?' best':''}">${r.price.toLocaleString('cs-CZ')} Kč</div>`;
+      tagH = isBest
+        ? `<span class="tag tag-best">Nejlevnější</span>`
+        : `<span class="tag tag-diff">+${(r.price - best).toLocaleString('cs-CZ')} Kč</span>`;
+    } else {
+      priceH = `<div class="price na">Nenalezeno</div>`;
+      tagH = `<span class="tag tag-na">Není v nabídce</span>`;
+    }
+
+    const linkH = r.url ? `<a class="open-link" href="${r.url}" target="_blank">Otevřít →</a>` : '';
+
+    html += `<div class="result">
+      <div class="shop-ico">${shop.ico}</div>
+      <div class="shop-info">
+        <div class="shop-name">${r.shop}</div>
+        <div class="shop-prod">${r.product_name || q}</div>
+      </div>
+      <div class="price-col">${priceH}${tagH}</div>
+      ${linkH}
+    </div>`;
+  });
+
+  area.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const k = gKey();
+  if(k){
+    document.getElementById('keyInp').value = k;
+    const b = document.querySelector('.btn-save');
+    b.textContent = '✓ Uložen'; b.style.color = '#34c759';
+  }
+  renderHist();
+  document.getElementById('qInp').addEventListener('keydown', e => {
+    if(e.key === 'Enter') doSearch();
+  });
+});
+</script>
+</body>
+</html>
